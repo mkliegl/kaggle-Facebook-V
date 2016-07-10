@@ -16,6 +16,7 @@ As it goes through the test data, it line-by-line makes a prediction
 and then learns from it.
 
 Instructions:
+
 1. Download the `test.csv` and `train.csv` files from [Kaggle][kaggle].
 2. Run `python sort_by_time.py test.csv test_sorted.csv` to sort the test
    data by time.
