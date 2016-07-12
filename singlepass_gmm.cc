@@ -62,6 +62,7 @@ constexpr double learn_rate = 0.6;
 // Constants
 //
 
+constexpr double pi = 3.14159265358979323846;
 constexpr double negative_infinity = -std::numeric_limits<double>::infinity();
 
 constexpr std::uint64_t minutes_per_day = 24 * 60;
@@ -239,6 +240,103 @@ private:
 
 
 //
+// GMM
+//
+
+namespace GMM {
+
+struct GmmComponent {
+    double weight;
+    double x_mean;
+    double y_mean;
+    double x_std;
+    double y_std;
+
+    double pdf(double x, double y) const {
+        double zx = (x - x_mean) / x_std;
+        double zy = (y - y_mean) / y_std;
+        return (weight * std::exp(-0.5 * (zx*zx + zy*zy))) /
+            (2.0 * pi * x_std * y_std);
+    }
+};
+
+class GmmDist {
+public:
+    void add_component(double weight, double x_mean, double y_mean,
+                       double x_var, double y_var) {
+        double x_std = std::sqrt(x_var);
+        double y_std = std::sqrt(y_var);
+        auto component = GmmComponent{weight, x_mean, y_mean, x_std, y_std};
+        components.push_back(component);
+    }
+
+    double get_score(double x, double y) const {
+        double score = 0.0;
+        for (auto const& component : components) {
+            score += component.pdf(x, y);
+        }
+        return score;
+    }
+
+private:
+    std::vector<GmmComponent> components;
+};
+
+class GMM {
+public:
+    void load_from_file(std::string filename) {
+        std::ifstream infile;
+        std::string line;
+        double weight, x_mean, y_mean, x_var, y_var;
+        int n_components, n_points;
+        std::uint64_t place_id;
+        char c;
+
+        std::cerr << "Loading GMM info from " << filename << std::endl;
+
+        infile.open(filename);
+        if (!infile.is_open()) {
+            std::cerr << "Failed to open file: " << filename << std::endl;
+            std::exit(EXIT_FAILURE);
+        }
+        std::getline(infile, line);  // skip header
+        std::uint64_t count = 0;
+        std::istringstream iss;
+        while (std::getline(infile, line)) {
+            count++;
+            iss.clear();
+            iss.str(line);
+            iss >> place_id >> c >> n_points >> c >> n_components;
+            num_points[place_id] = static_cast<double>(n_points);
+            if (n_components == 0) continue;
+            auto& dist = distributions[place_id];
+            for (int i = 0; i < n_components; ++i) {
+                iss >> c >> weight >> c >> x_mean >> c >> y_mean
+                    >> c >> x_var >> c >> y_var;
+                dist.add_component(weight, x_mean, y_mean, x_var, y_var);
+            }
+        }
+    }
+
+    double get_score(std::uint64_t place_id, double x, double y,
+                     std::uint64_t accuracy) {
+        if (num_points[place_id] < min_checkins) {
+            return 0.0;
+        } else {
+            return distributions[place_id].get_score(x, y);
+        }
+    }
+
+private:
+    static constexpr int min_checkins = 10;  // return score 0 if fewer checkins
+    std::unordered_map<std::uint64_t, GmmDist> distributions;
+    std::unordered_map<std::uint64_t, double> num_points;
+};
+
+}  // namespace GMM
+
+
+//
 // Trend histogram
 //
 
@@ -407,7 +505,8 @@ private:
 
 class Model {
 public:
-    void train_on_file(const std::string& filename);
+    void train_on_file(const std::string& filename,
+                       const std::string& gmm_filename);
 
     void predict_on_file(const std::string& filename,
                          const std::string& subfilename);
@@ -437,6 +536,7 @@ private:
     place_dict<PeriodicHist<day_of_week_bins, minutes_per_week>>
         day_of_week_hist;
     SpaceHist space_hist;
+    GMM::GMM gmm;
     place_dict<AccuracyHist<accuracy_bins>> accuracy_hist;
     place_dict<TrendHist<trend_bins, max_test_time>> trend_hist;
 };
@@ -467,7 +567,8 @@ double Model::detrended_score(std::uint64_t id, double x, double y,
     double score = 1.0;
 
     // space
-    score *= space_hist.get_score(id, x, y, accuracy, true);
+    score *= std::sqrt(gmm.get_score(id, x, y, accuracy));
+    score *= std::sqrt(space_hist.get_score(id, x, y, accuracy, true));
 
     // time-of-day
     score *= std::sqrt(time_of_day_hist[id].get_score(time, true));
@@ -498,7 +599,8 @@ Predictions Model::predict(double x, double y, std::uint64_t accuracy,
     return pred;
 }
 
-void Model::train_on_file(const std::string& filename) {
+void Model::train_on_file(const std::string& filename,
+                          const std::string& gmm_filename) {
     std::ifstream infile;
     std::string line;
     double x, y;
@@ -510,6 +612,8 @@ void Model::train_on_file(const std::string& filename) {
     auto start_time = steady_clock::now();
     auto last_time = start_time;
     auto now = start_time;
+
+    gmm.load_from_file(gmm_filename);
 
     std::cout << "Training on " << filename << std::endl;
 
@@ -648,15 +752,15 @@ void Model::predict_on_file(const std::string& filename,
 }
 
 int main(int argc, char **argv) {
-    if (argc != 4) {
-        std::cerr << "Expected three arguments: train_filename test_filename"
-                     " submission_filename" << std::endl;
+    if (argc != 5) {
+        std::cerr << "Expected four arguments: train_filename gmm_filename"
+                     " test_filename submission_filename" << std::endl;
         return EXIT_FAILURE;
     }
 
     Model model;
-    model.train_on_file(argv[1]);
-    model.predict_on_file(argv[2], argv[3]);
+    model.train_on_file(argv[1], argv[2]);
+    model.predict_on_file(argv[3], argv[4]);
 
     return 0;
 }

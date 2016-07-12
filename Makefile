@@ -12,7 +12,4 @@ all: $(CXXPROGS)
 check:
 	cppcheck --enable=all --suppress=missingIncludeSystem \
              --inconclusive --std=c++11 \
-             singlepass.cc
-
-singlepass: singlepass.cc
-	$(CXX) $(CXXFLAGS) -o $@ $<
+             *.cc
