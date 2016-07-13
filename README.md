@@ -8,14 +8,14 @@ An overview of the ideas and some discussion may be found in
 
 Overview of the performance of the solutions below:
 
-Version | Score | Leaderboard position*
---------|-------|---------------------
+Version | Score | Position
+--------|-------|---------
 single pass, learn only on train | 0.58973 | 85
 single pass, learn also on test | 0.60456 | 13
 single pass, learn also on test, GMM | 0.61047 | 6
 *[Jack (Japan)'s 3rd place solution][jack]* | 0.61394 | 3
 multipass, GMM | 0.62036 | 2
-my actual final submission | 0.62170 | 2
+*my actual final submission* | 0.62170 | 2
 *[Tom Van de Wiele's 1st place solution][ttvand]* | 0.62279 | 1
 
 (The above leaderboard positions are where I would have finished if
@@ -104,12 +104,12 @@ for testing to speed things up. The explanation is that the purpose of these
 validation slices was not for testing new ideas (for that I used
 a different, much smaller set). Rather, the purpose is as follows:
 
-(a) Monitor whether the convergence is stable over the 20 iterations.
-    (Ideally, it should be monotonically increasing. At least, the score
-     at pass 20 should be pretty close to the maximum score over all passes.)
-(b) Empirically learn the probabilities of predictions 1..learn_K being
-    correct in a given pass. These are used to adjust the learn weights
-    when learning from the actual test data.
+1. Monitor whether the convergence is stable over the 20 iterations.
+   (Ideally, it should be monotonically increasing. At least, the score
+    at pass 20 should be pretty close to the maximum score over all passes.)
+2. Empirically learn the probabilities of predictions 1..learn_K being
+   correct in a given pass. These are used to adjust the learn weights
+   when learning from the actual test data.
 
 
 ## License
