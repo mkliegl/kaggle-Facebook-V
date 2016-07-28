@@ -10,13 +10,13 @@ Overview of the performance of the solutions below:
 
 Version | Score | Position
 --------|-------|---------
-single pass, learn only on train | 0.58973 | 85
-single pass, learn also on test | 0.60456 | 13
-single pass, learn also on test, GMM | 0.61047 | 6
-*[Jack (Japan)'s 3rd place solution][jack]* | 0.61394 | 3
-multipass, GMM | 0.62036 | 2
-*my actual final submission* | 0.62170 | 2
 *[Tom Van de Wiele's 1st place solution][ttvand]* | 0.62279 | 1
+*my actual final submission* | 0.62170 | 2
+multipass, GMM | 0.62036 | 2
+*[Jack (Japan)'s 3rd place solution][jack]* | 0.61394 | 3
+single pass, learn also on test, GMM | 0.61047 | 6
+single pass, learn also on test | 0.60456 | 13
+single pass, learn only on train | 0.58973 | 85
 
 (The above leaderboard positions are where I would have finished if
  I hadn't submitted my actual final submission.)
@@ -50,7 +50,7 @@ improves the score a fair amount. Indeed, this version would have
 scored 0.61047.
 
 However, this gain comes at quite a loss in speed. Fitting the GMM's for the
-full train set took over 20 hours on my laptop.
+full train set took around 40 hours on my laptop (using 1 core).
 
 Instructions:
 
@@ -75,7 +75,7 @@ from the future (i.e., from checkins at times greater than t when making a
 prediction for a checkin at time t). If the application demanded real-time
 predictions, this would obviously not make sense.
 
-Running this takes something like 40-50 CPU-hours. To speed things up, I split
+Running this takes around 50-60 CPU-hours. To speed things up, I split
 the train and test data into slices and ran several slices in parallel with
 the help of [GNU parallel][gnu-parallel].
 
